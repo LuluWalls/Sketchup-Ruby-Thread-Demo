@@ -12,4 +12,6 @@
 - stop_work - shut down threads
 - worker1 - a utility thread that alternatively sleeps and runs
 
-This is followed by a set of sleep and run loops that execute on the main thread
+This is followed by a set of sleep and run loops that execute on the main thread and show that the subthreads do indeed continue to operate while the main thread is busy with ruby code. A final note, the UI.timer created on the main thread does not fire until
+this module returns the thread to Ruby control.
+
