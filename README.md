@@ -2,6 +2,7 @@
 
 ## module Lulu
   ### module Sigint_Trap
+  - ####  WARNING - Do not blithely add a SIGINT handler to your ruby code, it is not safe. This code is for demo purposes only!!!
   - Sigint_Trap is a SIGINT handler that interrupts the main Ruby thread (only when the thread is in the Ruby code) Sigint_Trap will either 'puts' the callers data to STDOUT or alternatively call a supplied Proc object on the main thread.
     
 ### module Simple_server
