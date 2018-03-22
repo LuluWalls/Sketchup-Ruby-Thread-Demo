@@ -1,1 +1,15 @@
 # Sketchup-Ruby-Thread-Demo
+
+## module Lulu
+  ### module Sigint_Trap
+  - Sigint_Trap is a SIGINT handler that interrupts the main Ruby thread (only when the thread is in the Ruby code) Sigint_Trap will either 'puts' the callers data to STDOUT or alternatively call a supplied Proc object on the main thread.
+    
+### module Simple_server
+  - A small webserver running on a Ruby thread. Call with http://localhost:2000/
+    
+### utility methods
+- start_work - start threads
+- stop_work - shut down threads
+- worker1 - a utility thread that alternatively sleeps and runs
+
+This is followed by a set of sleep and run loops that execute on the main thread
