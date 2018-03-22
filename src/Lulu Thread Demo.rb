@@ -4,6 +4,8 @@ require "objspace"
 module Lulu
  
   module Sigint_Trap
+    # WARNING - Do not blithely add a SIGINT handler to your ruby code, it is not safe. This code is for demo purposes only!!!
+    # WARNING AGAIN- Do not blithely add a SIGINT handler to your ruby code, it is not safe. This code is for demo purposes only!!!
     # Module Trap is a SIGINT handler that interrupts in the main
     # thread (only when the thread is in the Ruby code)
     # by default it will 'puts' the current_job on the console
@@ -125,6 +127,8 @@ module Lulu
    
   # initialize the sigint handler after load
   #start demo worker thread and server
+  # WARNING - Do not blithely add a SIGINT handler to your ruby code, it is
+  # not safe. This code is for demo purposes only!!!
   Sigint_Trap.init()
   start_work()
   puts "Got here"
