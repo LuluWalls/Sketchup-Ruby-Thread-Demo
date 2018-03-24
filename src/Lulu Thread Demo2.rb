@@ -1,4 +1,5 @@
 require 'socket'
+require 'cgi'
 #require "objspace"
 
 module Lulu
@@ -52,11 +53,16 @@ module Lulu
     # A small webserver, call with http://localhost:2000/
     # This will obviously fail because of conflicting port numbers if you run it in two instances of sketchup
     @html_body = <<-EOF
-    <html><body><h2>HTML Forms</h2><form action="simple_server">First name:<br><input type="text" name="firstname" value="Mickey">
-    <br>Last name:<br><input type="text" name="lastname" value="Mouse">
-    <br><br><input type="submit" value="Submit"><input type="submit" name="Button2" value="Happy Button"></form> 
-    <p>If you click the "Submit" button, the form-data will be sent to a page called "simple_server".</p>
-    </body></html>
+      <!DOCTYPE html>
+      <html><body><h2>HTML Forms</h2>
+      <form action="simple_server">First name:<br>
+      <input type="text" name="firstname" value="Mickey"><br>
+      Last name:<br>
+      <input type="text" name="lastname" value="Mouse"><br><br>
+      <input type="submit" name="shut_down" value="Shut Down"><br><br>
+      <input type="submit" name="shuttler_start" value="Start Shuttler"> <input type="submit" name="shuttler_stop" value="Stop Shuttler"><br><br>
+      <input type="submit" name="tictoc_start" value="Start Tictoc Thread"> <input type="submit" name="tictoc_stop" value="Stop Tictoc Thread"></form> 
+      </body></html>
     EOF
     @html_good = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\nHello world! The time is "
     @html_not_found = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length:0\r\nConnection: close\r\n"
@@ -81,15 +87,38 @@ module Lulu
             request = session.gets
             request_uri  = request.split(" ")[1]
             
-            #send the request to the stdout
+            #send the request string to the stdout
             Sigint_Trap.add_message("TCPServer: #{request_uri}")
-            request_params = request_uri.split("?")
-            request_file = request_params[0] 
             
-            if request_file == '/favicon.ico'
+            if request_uri.start_with?('/favicon.ico')
               response << @html_not_found
-            
             else
+              params = request_uri.split("?")[1]
+              params_hash = CGI::parse(request_uri.split("?")[1]) if params
+              
+              if params_hash
+                if params_hash["shuttler_start"][0]
+                  proc = Proc.new {Lulu::start_shuttler()}
+                  Sigint_Trap.add_message(proc)
+                end
+                if params_hash["shuttler_stop"][0]
+                  proc = Proc.new {Lulu::stop_shuttler()}
+                  Sigint_Trap.add_message(proc)
+                end
+                if params_hash["shut_down"][0]
+                  proc = Proc.new {Lulu::stop_work()}
+                  Sigint_Trap.add_message(proc)
+                end
+                if params_hash["tictoc_start"][0] #does this new thread need to be started by main?
+                  proc = Proc.new {Lulu::start_tictoc()}
+                  Sigint_Trap.add_message(proc)
+                end
+                if params_hash["tictoc_stop"][0]
+                  proc = Proc.new {Lulu::stop_tictoc()}
+                  Sigint_Trap.add_message(proc)
+                end
+              end
+              
               response << @html_good + Time.now.to_s
               response << @html_body
             end
@@ -131,19 +160,43 @@ module Lulu
     end
   end
   
+  def self.start_tictoc()
+    puts 'start tictoc'
+    puts @a.inspect
+    if !@a || !@a.alive? 
+      @a = Thread.new {worker1()}
+      @a.priority = 4
+    end
+  end
+  
+  def self.stop_tictoc()
+    puts 'stop tictoc'
+    @a.exit if @a.respond_to?(:exit)  #kill the demo worker thread
+  end
+  
   def self.start_work()
-    puts 'start work'
-    @a = Thread.new {worker1()}
-    @a.priority = 4
+    puts 'Starting Srcvices'
+    #start_tictoc()
     Simple_server.server_start(@t)
   end
   
   def self.stop_work()
-    @a.exit #kill the worker thread
+    puts 'Closing services'
+    stop_tictoc()
     Simple_server.server_stop()
     puts 'server stopped'
   end
   
+  # shuttler would be a bit of ruby code polling for updates to the model
+  def self.start_shuttler()
+    @shuttler = UI.start_timer(1.0,true) {puts "#{(Time.now - @t).to_s} shuttler called"}
+  end
+  
+  def self.stop_shuttler()
+    UI.stop_timer(@shuttler) if @shuttler
+    @shuttler = nil
+    puts "#{(Time.now - @t).to_s}  stop shuttler called"
+  end
   
   ##################################################### 
   # initialize the sigint handler after load
@@ -166,19 +219,18 @@ module Lulu
   # this will hang the console but the threads will continue to run
 
   # start a timer that will not be triggered until we return from this module
-  tim = UI.start_timer(0,false) {puts "#{(Time.now - @t).to_s}  UI stop_timer called"}
+  # tim = UI.start_timer(0,false) {puts "#{(Time.now - @t).to_s}  UI stop_timer called"}
 
-  @t = Time.now
-  sleep(5.0)
-  puts "#{(Time.now - @t).to_s} ==== starting loop"
-  x = 0
-  until x == 100000000
-   x += 1
-  end
-  puts "#{(Time.now - @t).to_s} ==== end loop"
-  sleep (5.0)
+  # sleep(5.0)
+  # puts "#{(Time.now - @t).to_s} ==== starting loop"
+  # x = 0
+  # until x == 100000000
+   # x += 1
+  # end
+  # puts "#{(Time.now - @t).to_s} ==== end loop"
+  # sleep (5.0)
   
-###  stop_work()
-  puts "#{(Time.now - @t).to_s} end module load"
+# ###  stop_work()
+  # puts "#{(Time.now - @t).to_s} end module load"
 
 end
