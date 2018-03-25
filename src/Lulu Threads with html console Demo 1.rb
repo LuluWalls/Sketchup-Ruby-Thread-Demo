@@ -42,12 +42,19 @@ module Lulu
       puts 'old SIGINT Handler' + @old_signal_handler.to_s
     end
     
+    # if the web console is act ive then send them to the browser
+    # otherwise, or if the messasge is a Proc object, interrupt the main thread via SIGINT
     def self.add_message(message)
-      @pending_messages << message
-      # trigger the SIGINT
-      Process.kill("INT", Process.pid)
+      if Simple_server.connected? && !message.is_a?(Proc)
+        #send to web console
+        Simple_server.console_out(message)
+      else
+        # send to SIGINT trap
+        @pending_messages << message
+        Process.kill("INT", Process.pid)
+      end
     end
-  end #sigint trap
+  end #sigint_trap
  
   module Simple_server
     # A small webserver, call with http://localhost:2000/
@@ -65,7 +72,8 @@ module Lulu
       </body></html>
     EOF
     @html_good = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\nHello world! The time is "
-    @html_console_start = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\nConsole Server Started "
+    #@html_console_start = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\nConsole Server Started "
+    @html_console_start = "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\nConsole Server Started<script>function start_scroll_down(){scroll = setInterval(function(){ window.scrollBy(0, 1000); console.log('start');}, 1500);}start_scroll_down();</script> "
     @html_not_found = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length:0\r\nConnection: close\r\n"
 
     def self.server_start(time)
@@ -75,11 +83,17 @@ module Lulu
       @server_thread = Thread.new {server_thread()}
       @server_thread.priority = 4
       @server_threads = []
-      @console_thread = nil
+      @console_connected 
+
+    end
+    
+    def self.connected?()
+      @console_connected 
     end
     
     def self.server_stop()
       begin
+        @console_connected = nil
         @server_threads.each {|thr| thr.exit}
         #@console_thread.exit
         @server_thread.exit
@@ -87,6 +101,7 @@ module Lulu
         #
         @console_rd_pipe.close
         @console_wr_pipe.close
+        
       rescue => e
         #send error messages from this thread to the ruby console
         Sigint_Trap.add_message("Exception in server stop: #{e.to_s}, #{e.backtrace.join("\n")}") 
@@ -94,7 +109,7 @@ module Lulu
     end
     
     def self.console_out(message)
-      @console_wr_pipe.puts "#{message}<br>"
+      @console_wr_pipe.puts "#{message}<br>" if @console_connected
     end
     
     def self.server_thread()
@@ -116,14 +131,17 @@ module Lulu
               
               if request_uri.start_with?('/favicon.ico')
                 response << @html_not_found
+                
               elsif request_uri.start_with?('/console')
+                #this is the fdeed to the web console
+                @console_connected = true
                 @console_thread = Thread.current 
                 session.print  "#{@html_console_start} #{Time.now.to_s}<br>Threads = #{@server_threads.size.to_s}<br>"
                 loop do
                   #x = 10/0 #test exception handling
                   session.print @console_rd_pipe.gets
                 end
-                #session.close
+                
               else
                 params = request_uri.split("?")[1]
                 params_hash = CGI::parse(request_uri.split("?")[1]) if params
@@ -201,7 +219,7 @@ module Lulu
   def self.start_tictoc()
     #puts 'start tictoc'
     Sigint_Trap.add_message("start tictoc")
-    Simple_server.console_out("start tictoc")
+    #Simple_server.console_out("start tictoc")
     if !@a || !@a.alive? 
       @a = Thread.new {tictoc_thread()}
       @a.priority = 4
@@ -209,8 +227,8 @@ module Lulu
   end
   
   def self.stop_tictoc()
-    #Sigint_Trap.add_message("stop tictoc")
-    Simple_server.console_out("stop tictoc")
+    Sigint_Trap.add_message("stop tictoc")
+    #Simple_server.console_out("stop tictoc")
     @a.exit if @a.respond_to?(:exit)  #kill the demo worker thread
   end
   
