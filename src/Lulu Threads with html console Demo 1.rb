@@ -66,7 +66,7 @@ module Lulu
       <input type="text" name="firstname" value="Mickey"><br>
       Last name:<br>
       <input type="text" name="lastname" value="Mouse"><br><br>
-      <input type="submit" name="shut_down" value="Shut Down"><br><br>
+      <input type="submit" name="shut_down" value="Shut Down Server"><br><br>
       <input type="submit" name="shuttler_start" value="Start UI timer on main thread"> <input type="submit" name="shuttler_stop" value="Stop UI timer"><br><br>
       <input type="submit" name="tictoc_start" value="Start Background Thread"> <input type="submit" name="tictoc_stop" value="Stop Background Thread"></form> 
       </body></html>
@@ -103,12 +103,13 @@ module Lulu
         @console_wr_pipe.close
         
       rescue => e
-        #send error messages from this thread to the ruby console
+        #send error messages from this thread to the console
         Sigint_Trap.add_message("Exception in server stop: #{e.to_s}, #{e.backtrace.join("\n")}") 
       end #end begin
     end
     
     def self.console_out(message)
+      #messages are dropped if we have no browser
       @console_wr_pipe.puts "#{message}<br>" if @console_connected
     end
     
