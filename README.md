@@ -1,5 +1,7 @@
 # Sketchup-Ruby-Thread-Demo
 
+Added: 'Lulu Threads with html console Demo 1.rb' which redirects Ruby Exception messages to the web console
+
 ## module Lulu
   ### module Sigint_Trap
   - ####  WARNING - Do not blithely add a SIGINT handler to your ruby code, it is not safe. This code is for demo purposes only!!!
